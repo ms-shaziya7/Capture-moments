@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Photographer Profiles - Capture Moments</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(
+        rgba(0, 0, 0, 0.6), 
+        rgba(0, 0, 0, 0.6)
+      ), url('https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+    }
+
+    .header {
+      text-align: center;
+      margin: 40px 0;
+    }
+
+    .header h1 {
+      font-weight: 600;
+      font-size: 3rem;
+    }
+
+    .header p {
+      font-size: 1.2rem;
+      color: #ccc;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      backdrop-filter: blur(10px);
+      color: white;
+      transition: 0.3s ease-in-out;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .card-text {
+      font-size: 1rem;
+      color: #eee;
+    }
+
+    .price {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #ffc107;
+    }
+
+    .container {
+      padding-bottom: 60px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>✨ Meet Our Star Photographers</h1>
+    <p>Skilled. Passionate. Memorable.</p>
+  </div>
+
+  <div class="container">
+    <div class="row g-4 justify-content-center">
+
+      {% set photographers = [
+        {"name": "Sana", "skills": "Wedding, Portraits", "price": "₹12,000/day"},
+        {"name": "Sneha", "skills": "Events, Travel", "price": "₹9,000/day"},
+        {"name": "Raju Bhai", "skills": "Adventure, Wildlife", "price": "₹18,000/day"},
+        {"name": "Krithin", "skills": "Birthday, Candid", "price": "₹7,500/day"},
+        {"name": "Smith", "skills": "Fashion, Editorial", "price": "₹15,000/day"},
+        {"name": "Mr. Majnu", "skills": "Wedding, Candid", "price": "₹10,000/day"},
+        {"name": "Sohe", "skills": "Tour, Nature", "price": "₹11,500/day"}
+      ] %}
+
+      {% for p in photographers %}
+      <div class="col-md-4 col-lg-3">
+        <div class="card p-3 h-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ p.name }}</h5>
+            <p class="card-text">📷 <strong>Specialties:</strong> {{ p.skills }}</p>
+            <p class="price">💰 {{ p.price }}</p>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+<a href="{{ url_for('dashboard') }}" class="btn btn-warning position-fixed bottom-0 start-0 m-4 px-4 py-2 rounded-pill shadow-lg">
+  ← Back to Dashboard
+</a>
+    </div>
+  </div>
+</body>
+</html>

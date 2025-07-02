@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome | Capture Moments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+   <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-family: 'Open Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(15px);
+      border-radius: 20px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.3);
+      padding: 50px 40px;
+      text-align: center;
+      width: 400px;
+      animation: zoomIn 1s ease-out;
+      color: white;
+    }
+
+    h1 {
+      font-family: 'Pacifico', cursive;
+      font-size: 2.8rem;
+      color: #fff;
+      margin-bottom: 15px;
+    }
+
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 30px;
+      color: #e0e0e0;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .btn {
+      background-color: #4fc3f7;
+      color: #fff;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 30px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background-color: #039be5;
+      box-shadow: 0 6px 18px rgba(3, 155, 229, 0.4);
+      transform: scale(1.05);
+    }
+
+    .back-btn {
+      background-color: transparent;
+      color: #ffffff;
+      border: 2px solid #ffffff;
+    }
+
+    .back-btn:hover {
+      background-color: #ffffff;
+      color: #4fc3f7;
+    }
+
+    @keyframes zoomIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Welcome! </h1>
+    <p>Join us and capture your precious memories beautifully.</p>
+
+    <div class="btn-group">
+      <a href="{{ url_for('login') }}" class="btn">Login</a>
+      <a href="{{ url_for('signup') }}" class="btn">Sign Up</a>
+      <a href="{{ url_for('forgot_password') }}" class="btn">Forgot Password</a>
+     <a href="{{ url_for('index') }}" class="btn back-btn">← Back to Landing Page</a>
+    </div>
+  </div>
+</body>
+</html>

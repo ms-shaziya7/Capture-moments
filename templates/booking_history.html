@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Your Booking History | Capture Moments</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(120deg, #f6f9fc, #e0f7fa);
+      font-family: 'Raleway', sans-serif;
+      padding: 2rem;
+    }
+
+    .timeline {
+      position: relative;
+      padding: 2rem 0;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: #9c27b0;
+      transform: translateX(-50%);
+    }
+
+    .booking-card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+      margin: 2rem auto;
+      width: 80%;
+      position: relative;
+      border-left: 8px solid #9c27b0;
+      animation: slideUp 0.6s ease;
+    }
+
+    .booking-card::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 20px;
+      width: 20px;
+      height: 20px;
+      background: #9c27b0;
+      border-radius: 50%;
+      border: 3px solid white;
+    }
+
+    h3 {
+      font-weight: 700;
+      color: #333;
+    }
+
+    p {
+      margin: 0.2rem 0;
+      color: #555;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .back-btn {
+      display: inline-block;
+      margin-top: 1rem;
+      background-color: #9c27b0;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 25px;
+      text-decoration: none;
+      transition: 0.3s ease;
+    }
+
+    .back-btn:hover {
+      background-color: #6a0080;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container text-center">
+    <h1 class="mb-4">📖 Your Booking History</h1>
+
+    <div class="timeline">
+      {% if bookings %}
+        {% set latest_booking = bookings[-1] %}
+        <div class="booking-card text-start">
+          <h3>Latest Booking: {{ latest_booking.event_type }} 📸</h3>
+          <p><strong>Date:</strong> {{ latest_booking.booking_date }}</p>
+          <p><strong>Time:</strong> {{ latest_booking.booking_time }}</p>
+          <p><strong>Photographer:</strong> {{ latest_booking.photographer_name }}</p>
+          <p><strong>Status:</strong> {{ latest_booking.status }}</p>
+          <p><strong>Amount:</strong> ₹{{ latest_booking.price }}</p>
+        </div>
+      {% else %}
+        <p>No bookings found.</p>
+      {% endif %}
+    </div>
+
+    <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
+  </div>
+
+</body>
+</html>

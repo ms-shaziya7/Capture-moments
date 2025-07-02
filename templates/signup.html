@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup | Capture Moments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: 'Quicksand', sans-serif;
+      background: linear-gradient(to right, #f6d365, #fda085);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .signup-card {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px 35px;
+      width: 400px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.2);
+      animation: fadeIn 1s ease-in;
+    }
+
+    h2 {
+      text-align: center;
+      color: #b7410e;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 18px;
+      font-size: 1rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #b7410e;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #ff5722;
+      box-shadow: 0 4px 12px rgba(183, 65, 14, 0.3);
+    }
+
+    .links {
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    .links a {
+      color: #b7410e;
+      text-decoration: none;
+      font-size: 0.95rem;
+      margin: 0 8px;
+    }
+
+    .links a:hover {
+      text-decoration: underline;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <form class="signup-card" method="POST">
+    <h2>Create Account</h2>
+    <input type="text" name="name" placeholder="Full Name" required>
+    <input type="email" name="email" placeholder="Email Address" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+    <button type="submit">Sign Up</button>
+
+    <div class="links">
+      <a href="{{ url_for('login') }}">Already have an account?</a> |
+      <a href="{{ url_for('home') }}">Back</a>
+    </div>
+  </form>
+</body>
+</html>
