@@ -25,20 +25,32 @@ def home():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Placeholder for login logic
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        # In a real app, you'd verify credentials against your database
-        # For demonstration, let's assume a successful login
-        if email == 'test@example.com' and password == 'password':
-            session['logged_in'] = True
-            session['user_name'] = 'Test User' # Store user's name in session
-            return redirect(url_for('dashboard'))
-        else:
-            # Handle invalid credentials
-            pass
-    return render_template('login.html')
+        if request.method == 'POST':
+            email = request.form['email']
+            password = request.form['password']
+            try:
+                response = users_table.get_item(Key={'email': email})
+                user = response.get('Item')
+                # --- CRITICAL LOGIC HERE ---
+                if user and user.get('password') == password:
+                    # Authentication successful
+                    session['user_email'] = email
+                    session['user_name'] = user.get('name', 'Guest')
+                    session['logged_in'] = True # Set this for dashboard check
+                    flash("Login successful!", "success")
+                    return redirect(url_for('dashboard'))
+                else:
+                    # Authentication failed (user not found or password mismatch)
+                    flash("Invalid username or password!", "danger")
+                    # No redirect here, just let it fall through to re-render login.html
+            except ClientError as e:
+                # Database access error
+                flash(f"Database error: {e.response['Error']['Message']}", "danger")
+                # No redirect here, just let it fall through to re-render login.html
+# This line is reached if:
+        # 1. It's a GET request (initial page load)
+        # 2. It's a POST request and authentication failed (invalid credentials or DB error)
+        return render_template('login.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -144,4 +156,4 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)
