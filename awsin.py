@@ -1,159 +1,265 @@
-from flask import Flask, render_template, redirect, url_for, request, session, flash
-import boto3
-from botocore.exceptions import ClientError
+import os
 import uuid
+from datetime import datetime
+import json # For pretty printing DynamoDB responses (optional)
 
+from flask import Flask, request, jsonify, session, redirect, url_for, render_template, flash
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+
+# --- Flask App Configuration ---
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+# Generate a strong secret key for session management.
+# In production, load this from an environment variable or a secure config.
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'a_very_strong_and_random_secret_key_for_capture_moments_app_12345')
 
-# ------------------ DynamoDB Connection ------------------
-dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')  # Use your correct AWS region
+# --- AWS DynamoDB Configuration ---
+# It's best practice to let boto3 pick up region and credentials from
+# environment variables or IAM roles on EC2.
+# You can explicitly set region if needed, but generally not required on EC2 with IAM role.
+# AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1') # Example region
+# dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
+dynamodb = boto3.resource('dynamodb') # boto3 will auto-configure region/credentials
 
-# Ensure the tables exist (users and bookings)
-users_table = dynamodb.Table('Users')
-bookings_table = dynamodb.Table('Bookings')
+# DynamoDB Table Names (ensure these match your actual table names in AWS)
+USERS_TABLE = os.environ.get('USERS_TABLE', 'CaptureMomentsUsers')
+BOOKINGS_TABLE = os.environ.get('BOOKINGS_TABLE', 'CaptureMomentsBookings')
 
-# ------------------ Routes ------------------
+users_table = dynamodb.Table(USERS_TABLE)
+bookings_table = dynamodb.Table(BOOKINGS_TABLE)
+
+# --- Helper Functions ---
+
+def is_logged_in():
+    """Checks if a user is logged in."""
+    return 'user_email' in session
+
+def get_current_user_email():
+    """Returns the email of the currently logged-in user."""
+    return session.get('user_email')
+
+def get_user_name_from_email(email):
+    """Fetches user's name from DynamoDB based on email."""
+    try:
+        response = users_table.get_item(Key={'email': email})
+        return response.get('Item', {}).get('name', 'Guest')
+    except Exception as e:
+        print(f"Error fetching user name for {email}: {e}")
+        return "Guest"
+
+# --- Routes ---
 
 @app.route('/')
 def index():
+    """Landing page."""
     return render_template('index.html')
 
 @app.route('/home')
 def home():
+    """Welcome page with login/signup options."""
     return render_template('home.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-        if request.method == 'POST':
-            email = request.form['email']
-            password = request.form['password']
-            try:
-                response = users_table.get_item(Key={'email': email})
-                user = response.get('Item')
-                # --- CRITICAL LOGIC HERE ---
-                if user and user.get('password') == password:
-                    # Authentication successful
-                    session['user_email'] = email
-                    session['user_name'] = user.get('name', 'Guest')
-                    session['logged_in'] = True # Set this for dashboard check
-                    flash("Login successful!", "success")
-                    return redirect(url_for('dashboard'))
-                else:
-                    # Authentication failed (user not found or password mismatch)
-                    flash("Invalid username or password!", "danger")
-                    # No redirect here, just let it fall through to re-render login.html
-            except ClientError as e:
-                # Database access error
-                flash(f"Database error: {e.response['Error']['Message']}", "danger")
-                # No redirect here, just let it fall through to re-render login.html
-# This line is reached if:
-        # 1. It's a GET request (initial page load)
-        # 2. It's a POST request and authentication failed (invalid credentials or DB error)
-        return render_template('login.html')
+    """User login page."""
+    if is_logged_in():
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+
+        try:
+            response = users_table.get_item(Key={'email': email})
+            user = response.get('Item')
+
+            if user and user['password'] == password: # In production, use password hashing (e.g., bcrypt)
+                session['user_email'] = user['email']
+                session['user_name'] = user['name']
+                flash('Logged in successfully!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Invalid email or password.', 'danger')
+        except Exception as e:
+            flash(f'An error occurred during login: {e}', 'danger')
+            print(f"Login error: {e}")
+
+    return render_template('login.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    # Placeholder for signup logic
+    """User signup page."""
+    if is_logged_in():
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
-        # In a real app, you'd create a new user in your database
-        # and handle password hashing, etc.
-        print(f"New user signup: {name}, {email}")
-        return redirect(url_for('login'))
+
+        if password != confirm_password:
+            flash('Passwords do not match.', 'warning')
+            return render_template('signup.html')
+
+        try:
+            # Check if user already exists
+            response = users_table.get_item(Key={'email': email})
+            if response.get('Item'):
+                flash('Email already registered. Please login.', 'warning')
+                return render_template('signup.html')
+
+            # Create new user (In production, hash password before storing)
+            users_table.put_item(
+                Item={
+                    'email': email,
+                    'name': name,
+                    'password': password, # Store hashed password in production!
+                    'created_at': datetime.now().isoformat()
+                }
+            )
+            flash('Account created successfully! Please log in.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            flash(f'An error occurred during signup: {e}', 'danger')
+            print(f"Signup error: {e}")
+
     return render_template('signup.html')
 
-@app.route('/forgot_password', methods=['GET', 'POST'])
+@app.route('/forgot_password')
 def forgot_password():
-    # Placeholder for forgot password logic
-    if request.method == 'POST':
-        email = request.form['email']
-        print(f"Password reset requested for: {email}")
-        # In a real app, you'd send a reset link to the email
+    """Forgot password page (dummy for now)."""
+    flash('Password reset functionality is not implemented in this demo.', 'warning')
     return render_template('forgot_password.html')
 
 @app.route('/dashboard')
 def dashboard():
-    if not session.get('logged_in'):
+    """User dashboard."""
+    if not is_logged_in():
+        flash('Please log in to access the dashboard.', 'warning')
         return redirect(url_for('login'))
-    user_name = session.get('user_name', 'Guest')
+    
+    user_name = session.get('user_name', get_user_name_from_email(get_current_user_email()))
     return render_template('dashboard.html', user_name=user_name)
 
 @app.route('/about_us')
 def about_us():
+    """About Us page."""
     return render_template('about_us.html')
 
 @app.route('/booking', methods=['GET', 'POST'])
 def booking():
-    if not session.get('logged_in'):
+    """Book a Photographer page."""
+    if not is_logged_in():
+        flash('Please log in to book a photographer.', 'warning')
         return redirect(url_for('login'))
-    message = None
-    booking_details = {} # Dictionary to hold details for confirmation
-    if request.method == 'POST':
-        booking_details['name'] = request.form['name']
-        booking_details['location'] = request.form['location']
-        booking_details['date'] = request.form['date']
-        booking_details['type'] = request.form['type']
-        booking_details['user_email'] = session.get('user_email') # Link booking to user
-        # Simulate price calculation based on type
-        if booking_details['type'] == 'Wedding':
-            booking_details['price'] = 12000
-        elif booking_details['type'] == 'Events':
-            booking_details['price'] = 9000
-        elif booking_details['type'] == 'Birthday':
-            booking_details['price'] = 7500
-        elif booking_details['type'] == 'Tour':
-            booking_details['price'] = 11500
-        elif booking_details['type'] == 'Wildlife':
-            booking_details['price'] = 18000
-        elif booking_details['type'] == 'Adventure':
-            booking_details['price'] = 18000
-        else:
-            booking_details['price'] = 5000 # Default price
-        # Simulate photographer assignment and status
-        booking_details['photographer'] = "Assigned Photographer" # In a real app, this would be dynamic
-        booking_details['status'] = "Upcoming"
-        # Add the booking to our global list
-        all_bookings.append(booking_details)
-        message = "Your booking has been confirmed!"
-        return render_template('booking.html', message=message, **booking_details)
-    return render_template('booking.html')
 
+    if request.method == 'POST':
+        name = request.form['name']
+        location = request.form['location']
+        date_str = request.form['date']
+        booking_type = request.form['type']
+
+        # Dummy price calculation based on type
+        price_map = {
+            'Wedding': 25000,
+            'Events': 15000,
+            'Birthday': 10000,
+            'Tour': 12000,
+            'Wildlife': 18000,
+            'Adventure': 20000
+        }
+        price = price_map.get(booking_type, 10000) # Default price
+
+        booking_id = str(uuid.uuid4()) # Generate unique booking ID
+        user_email = get_current_user_email()
+        booking_time = datetime.now().isoformat() # Timestamp of booking creation
+
+        try:
+            bookings_table.put_item(
+                Item={
+                    'booking_id': booking_id,
+                    'user_email': user_email, # Used for GSI
+                    'name': name,
+                    'location': location,
+                    'booking_date': date_str,
+                    'event_type': booking_type,
+                    'price': price,
+                    'status': 'Pending', # Initial status
+                    'booking_time': booking_time,
+                    'photographer_name': 'Assigned Soon' # Placeholder
+                }
+            )
+            flash('Booking confirmed successfully!', 'success')
+            return render_template('booking.html',
+                                   message='Booking Confirmed!',
+                                   name=name,
+                                   location=location,
+                                   date=date_str,
+                                   type=booking_type,
+                                   price=price)
+        except Exception as e:
+            flash(f'An error occurred during booking: {e}', 'danger')
+            print(f"Booking error: {e}")
+
+    return render_template('booking.html')
 
 @app.route('/profile')
 def profile():
+    """Photographer Profiles page."""
+    # No login required for this page in the original template, but can be added.
+    # if not is_logged_in():
+    #     flash('Please log in to view profiles.', 'warning')
+    #     return redirect(url_for('login'))
     return render_template('profile.html')
 
 @app.route('/booking_history')
 def booking_history():
-    if not session.get('logged_in'):
+    """User's booking history."""
+    if not is_logged_in():
+        flash('Please log in to view your booking history.', 'warning')
         return redirect(url_for('login'))
-    current_user_email = session.get('user_email')
-    # Filter bookings for the current logged-in user
-    user_bookings = [
-        booking for booking in all_bookings
-        if booking.get('user_email') == current_user_email
-    ]
-    # Sort bookings by date (most recent first, or upcoming first)
-    # Assuming date is in 'YYYY-MM-DD' format for easy comparison
-    user_bookings.sort(key=lambda x: x['date'], reverse=True)
-    return render_template('booking_history.html', bookings=user_bookings)
+
+    user_email = get_current_user_email()
+    bookings = []
+    try:
+        # Query the GSI to get bookings for the current user
+        response = bookings_table.query(
+            IndexName='user_email-index', # Name of your GSI
+            KeyConditionExpression=Key('user_email').eq(user_email),
+            ScanIndexForward=False # Get latest bookings first
+        )
+        bookings = response.get('Items', [])
+        # print(f"Fetched bookings for {user_email}: {json.dumps(bookings, indent=2)}") # For debugging
+    except Exception as e:
+        flash(f'Error fetching booking history: {e}', 'danger')
+        print(f"Booking history error for {user_email}: {e}")
+
+    return render_template('booking_history.html', bookings=bookings)
+
 @app.route('/user_reviews')
 def user_reviews():
+    """User Reviews page."""
     return render_template('user_reviews.html')
 
 @app.route('/photographer_categories')
 def photographer_categories():
+    """Photographer Categories page."""
     return render_template('photographer_categories.html')
 
 @app.route('/logout')
 def logout():
-    session.pop('logged_in', None)
+    """User logout."""
+    session.pop('user_email', None)
     session.pop('user_name', None)
-    return redirect(url_for('index'))
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('home'))
 
+# --- Run the Flask App ---
 if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0',port=5000)
+    # In a production EC2 environment, you would use Gunicorn or uWSGI
+    # and Nginx as a reverse proxy.
+    # For local development, app.run() is fine.
+    # To make it accessible from external IPs (like 3.94.128.66),
+    # the host must be '0.0.0.0'.
+    app.run(debug=True, host='0.0.0.0', port=5000)
