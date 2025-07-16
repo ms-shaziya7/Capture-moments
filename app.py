@@ -1,141 +1,161 @@
-# Assuming you have a Flask app instance, e.g., app = Flask(__name__)
-# And a database setup, e.g., db = SQLAlchemy(app)
-
-from flask import Flask, render_template, session, redirect, url_for, request
+# app.py
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key' # Replace with a strong secret key
+app.secret_key = 'your_secret_key_here' # Replace with a strong secret key
 
+# Dummy user data for demonstration
+users = {
+    "test@example.com": {"password": "password123", "name": "Test User"}
+}
 
-
-# --- Routes ---
+# Dummy booking data for demonstration
+bookings_db = []
 
 @app.route('/')
 def index():
+    """Renders the landing page."""
     return render_template('index.html')
 
 @app.route('/home')
 def home():
+    """Renders the home page with login/signup options."""
     return render_template('home.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Placeholder for login logic
+    """Handles user login."""
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        # In a real app, you'd verify credentials against your database
-        # For demonstration, let's assume a successful login
-        if email == 'test@example.com' and password == 'password':
+        if email in users and users[email]['password'] == password:
             session['logged_in'] = True
-            session['user_name'] = 'Test User' # Store user's name in session
+            session['user_email'] = email
+            session['user_name'] = users[email]['name']
+            flash('Logged in successfully!', 'success')
             return redirect(url_for('dashboard'))
         else:
-            # Handle invalid credentials
-            pass
+            flash('Invalid email or password.', 'danger')
     return render_template('login.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    # Placeholder for signup logic
+    """Handles user registration."""
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
-        # In a real app, you'd create a new user in your database
-        # and handle password hashing, etc.
-        print(f"New user signup: {name}, {email}")
-        return redirect(url_for('login'))
+
+        if password != confirm_password:
+            flash('Passwords do not match!', 'danger')
+        elif email in users:
+            flash('Email already registered. Please login.', 'warning')
+        else:
+            users[email] = {"password": password, "name": name}
+            flash('Account created successfully! Please login.', 'success')
+            return redirect(url_for('login'))
     return render_template('signup.html')
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
-    # Placeholder for forgot password logic
+    """Handles forgot password requests."""
     if request.method == 'POST':
         email = request.form['email']
-        print(f"Password reset requested for: {email}")
-        # In a real app, you'd send a reset link to the email
+        if email in users:
+            flash('A password reset link has been sent to your email (dummy action).', 'success')
+        else:
+            flash('Email not found.', 'danger')
     return render_template('forgot_password.html')
 
 @app.route('/dashboard')
 def dashboard():
+    """Renders the user dashboard."""
     if not session.get('logged_in'):
+        flash('Please log in to access the dashboard.', 'warning')
         return redirect(url_for('login'))
     user_name = session.get('user_name', 'Guest')
     return render_template('dashboard.html', user_name=user_name)
 
 @app.route('/about_us')
 def about_us():
+    """Renders the about us page."""
     return render_template('about_us.html')
 
 @app.route('/booking', methods=['GET', 'POST'])
 def booking():
+    """Handles booking a photographer."""
     if not session.get('logged_in'):
+        flash('Please log in to book a photographer.', 'warning')
         return redirect(url_for('login'))
-    message = None
-    booking_details = {} # Dictionary to hold details for confirmation
-    if request.method == 'POST':
-        booking_details['name'] = request.form['name']
-        booking_details['location'] = request.form['location']
-        booking_details['date'] = request.form['date']
-        booking_details['type'] = request.form['type']
-        booking_details['user_email'] = session.get('user_email') # Link booking to user
-        # Simulate price calculation based on type
-        if booking_details['type'] == 'Wedding':
-            booking_details['price'] = 12000
-        elif booking_details['type'] == 'Events':
-            booking_details['price'] = 9000
-        elif booking_details['type'] == 'Birthday':
-            booking_details['price'] = 7500
-        elif booking_details['type'] == 'Tour':
-            booking_details['price'] = 11500
-        elif booking_details['type'] == 'Wildlife':
-            booking_details['price'] = 18000
-        elif booking_details['type'] == 'Adventure':
-            booking_details['price'] = 18000
-        else:
-            booking_details['price'] = 5000 # Default price
-        # Simulate photographer assignment and status
-        booking_details['photographer'] = "Assigned Photographer" # In a real app, this would be dynamic
-        booking_details['status'] = "Upcoming"
-        # Add the booking to our global list
-        all_bookings.append(booking_details)
-        message = "Your booking has been confirmed!"
-        return render_template('booking.html', message=message, **booking_details)
-    return render_template('booking.html')
 
+    if request.method == 'POST':
+        name = request.form['name']
+        location = request.form['location']
+        date = request.form['date']
+        photography_type = request.form['type']
+
+        # Dummy price calculation based on type
+        price_map = {
+            "Wedding": 25000,
+            "Events": 15000,
+            "Birthday": 10000,
+            "Tour": 12000,
+            "Wildlife": 20000,
+            "Adventure": 18000
+        }
+        price = price_map.get(photography_type, 0)
+
+        # Store booking details (dummy storage)
+        booking_details = {
+            "name": name,
+            "location": location,
+            "date": date,
+            "type": photography_type,
+            "price": price,
+            "message": "Your booking has been confirmed!"
+        }
+        bookings_db.append({
+            "event_type": photography_type,
+            "booking_date": date,
+            "booking_time": "N/A", # Not collected in form
+            "photographer_name": "Assigned Soon", # Dummy
+            "status": "Pending",
+            "price": price
+        })
+        return render_template('booking.html', **booking_details)
+    return render_template('booking.html')
 
 @app.route('/profile')
 def profile():
+    """Renders the photographer profiles page."""
     return render_template('profile.html')
 
 @app.route('/booking_history')
 def booking_history():
+    """Renders the user's booking history."""
     if not session.get('logged_in'):
+        flash('Please log in to view your booking history.', 'warning')
         return redirect(url_for('login'))
-    current_user_email = session.get('user_email')
-    # Filter bookings for the current logged-in user
-    user_bookings = [
-        booking for booking in all_bookings
-        if booking.get('user_email') == current_user_email
-    ]
-    # Sort bookings by date (most recent first, or upcoming first)
-    # Assuming date is in 'YYYY-MM-DD' format for easy comparison
-    user_bookings.sort(key=lambda x: x['date'], reverse=True)
-    return render_template('booking_history.html', bookings=user_bookings)
+    return render_template('booking_history.html', bookings=bookings_db)
+
 @app.route('/user_reviews')
 def user_reviews():
+    """Renders the user reviews page."""
     return render_template('user_reviews.html')
 
 @app.route('/photographer_categories')
 def photographer_categories():
+    """Renders the photographer categories page."""
     return render_template('photographer_categories.html')
 
 @app.route('/logout')
 def logout():
+    """Logs out the user."""
     session.pop('logged_in', None)
+    session.pop('user_email', None)
     session.pop('user_name', None)
+    flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
